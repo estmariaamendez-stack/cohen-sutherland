@@ -35,13 +35,52 @@ Y2 <input id="y2" type="number">
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-// 🟩 la ventana se define como un viewport dinámico (no fijo)
+//  la ventana se define como un viewport dinámico (no fijo)
 let windowClip = {
   x: 100,
   y: 80,
   w: 300,
   h: 220
 };
+// convertir eje Y (cartesiano)
+function convertirY(y){
+  return canvas.height - y;
+}
+// dibujar cuadrícula
+function dibujarCuadricula(){
+  ctx.strokeStyle = "#ddd";
+
+  for(let x = 0; x < canvas.width; x += 20){
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+
+  for(let y = 0; y < canvas.height; y += 20){
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+}
+// dibujar ejes
+function dibujarEjes(){
+  ctx.strokeStyle = "black";
+
+  // eje X
+  ctx.beginPath();
+  ctx.moveTo(0, convertirY(0));
+  ctx.lineTo(canvas.width, convertirY(0));
+  ctx.stroke();
+
+  // eje Y
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(0, canvas.height);
+  ctx.stroke();
+}
+
 
 // se inicia el primer paso del algoritmo de cohen, se calculan los códigos de cada región
 function computeCode(x, y){
@@ -118,7 +157,7 @@ function cohenSutherland(x1, y1, x2, y2){
   return { x1, y1, x2, y2 };
 }
 
-// 🖱️ la ventana se mueve libre con el mouse y no es fija
+//  la ventana se mueve libre con el mouse y no es fija
 let dragging = false;
 let offsetX, offsetY;
 
@@ -156,15 +195,22 @@ canvas.addEventListener("mousemove", (e) => {
 canvas.addEventListener("mouseup", () => dragging = false);
 canvas.addEventListener("mouseleave", () => dragging = false);
 
-// FUNCIÓN PRINCIPAL
-// se dibuja la ventana, la línea original y la línea recortada
+// DIBUJAR TODO
 function dibujar(){
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // se dibuja la ventana
-  ctx.strokeStyle = "black";
-  ctx.strokeRect(windowClip.x, windowClip.y, windowClip.w, windowClip.h);
+  dibujarCuadricula();
+  dibujarEjes();
+
+  // ventana
+  ctx.strokeStyle = "green";
+  ctx.strokeRect(
+    windowClip.x,
+    convertirY(windowClip.y + windowClip.h),
+    windowClip.w,
+    windowClip.h
+  );
 
   let x1 = parseInt(document.getElementById("x1").value);
   let y1 = parseInt(document.getElementById("y1").value);
@@ -173,24 +219,22 @@ function dibujar(){
 
   if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) return;
 
-  // línea original (azul)
+  // azul (original)
   ctx.strokeStyle = "blue";
   ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
+  ctx.moveTo(x1, convertirY(y1));
+  ctx.lineTo(x2, convertirY(y2));
   ctx.stroke();
 
-  // línea recortada (roja)
+  // rojo (recortada)
   let clipped = cohenSutherland(x1, y1, x2, y2);
 
   if (clipped) {
     ctx.strokeStyle = "red";
     ctx.beginPath();
-    ctx.moveTo(clipped.x1, clipped.y1);
-    ctx.lineTo(clipped.x2, clipped.y2);
+    ctx.moveTo(clipped.x1, convertirY(clipped.y1));
+    ctx.lineTo(clipped.x2, convertirY(clipped.y2));
     ctx.stroke();
-  } else {
-    alert("La línea está completamente fuera");
   }
 }
 
