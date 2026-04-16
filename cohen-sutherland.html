@@ -56,11 +56,69 @@ function computeCode(x, y){
 
   return code;
 }
+// ALGORITMO COHEN-SUTHERLAND se revisa cada caso y se realiza el recorte 
+function cohenSutherland(x1, y1, x2, y2){
+
+  let code1 = computeCode(x1, y1);
+  let code2 = computeCode(x2, y2);
+
+  let accept = false;
+
+  while (true) {
+
+    // CASO 1: totalmente dentro del viewpart 
+    if ((code1 | code2) === 0) {
+      accept = true;
+      break;
+    }
+
+    // CASO 2: totalmente fuera
+    if ((code1 & code2) !== 0) {
+      return null;
+    }
+
+    // CASO 3: recorte, se calcula el punto de intersecci y se procede a recortar 
+    let codeOut = code1 !== 0 ? code1 : code2;
+
+    let x, y;
+
+    // intersecciones
+    if (codeOut & 8) { // arriba 1000
+      x = x1 + (x2 - x1) * (ymax - y1) / (y2 - y1);
+      y = ymax;
+    }
+    else if (codeOut & 4) { // abajo 0100
+      x = x1 + (x2 - x1) * (ymin - y1) / (y2 - y1);
+      y = ymin;
+    }
+    else if (codeOut & 2) { // derecha 0010
+      y = y1 + (y2 - y1) * (xmax - x1) / (x2 - x1);
+      x = xmax;
+    }
+    else if (codeOut & 1) { // izquierda 0001
+      y = y1 + (y2 - y1) * (xmin - x1) / (x2 - x1);
+      x = xmin;
+    }
+
+    //  se reemplaza el punto
+    if (codeOut === code1) {
+      x1 = x;
+      y1 = y;
+      code1 = computeCode(x1, y1);
+    } else {
+      x2 = x;
+      y2 = y;
+      code2 = computeCode(x2, y2);
+    }
+  }
+
+  return { x1, y1, x2, y2 };
+}
 
 // FUNCIÓN PRINCIPAL
 function dibujar(){
 
-  ctx.clearRect(0, 0, 500, 400);
+ctx.clearRect(0, 0, 500, 400);
   dibujarVentana();
 
   let x1 = parseInt(document.getElementById("x1").value);
@@ -80,13 +138,23 @@ function dibujar(){
   ctx.lineTo(x2, y2);
   ctx.stroke();
 
-  // solo mostramos códigos por el momento 
-  console.log("Code P1:", computeCode(x1,y1));
-  console.log("Code P2:", computeCode(x2,y2));
+    // se diseña y se especfica como es la línea recortada
+  let clipped = cohenSutherland(x1, y1, x2, y2);
+
+  if (clipped) {
+    ctx.strokeStyle = "red";
+    ctx.beginPath();
+    ctx.moveTo(clipped.x1, clipped.y1);
+    ctx.lineTo(clipped.x2, clipped.y2);
+    ctx.stroke();
+  } else {
+    alert("La línea está completamente fuera");
+  }
 }
 
 // inicial
 dibujarVentana();
+
 </script>
 
 </body>
