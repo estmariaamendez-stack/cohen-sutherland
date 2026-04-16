@@ -23,7 +23,7 @@ canvas {
 <canvas id="canvas" width="500" height="400"></canvas>
 <br><br>
 
-//se crean los botones para ingresar los puntos y empezara dibujar las lineas 
+<!-- se crean los botones para ingresar los puntos y empezar a dibujar las líneas -->
 X1 <input id="x1" type="number">
 Y1 <input id="y1" type="number">
 X2 <input id="x2" type="number">
@@ -35,72 +35,75 @@ Y2 <input id="y2" type="number">
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-// ventana de recorte
-const xmin = 100, xmax = 400;
-const ymin = 80, ymax = 300;
+// 🟩 la ventana se define como un viewport dinámico (no fijo)
+let windowClip = {
+  x: 100,
+  y: 80,
+  w: 300,
+  h: 220
+};
 
-// se crea la funcion para todo lo que se ve en el programa como la ventana o la linea 
-function dibujarVentana(){
-  ctx.strokeStyle = "black";
-  ctx.strokeRect(xmin, ymin, xmax - xmin, ymax - ymin);
-}
-
-//se inicia el primer paso para el algoritmo de cohen , se empieza a calcular los codigos de cada region 
+// se inicia el primer paso del algoritmo de cohen, se calculan los códigos de cada región
 function computeCode(x, y){
   let code = 0;
 
-  if (y > ymax) code |= 8;
-  if (y < ymin) code |= 4;
-  if (x > xmax) code |= 2;
-  if (x < xmin) code |= 1;
+  // arriba
+  if (y > windowClip.y + windowClip.h) code |= 8;
+
+  // abajo
+  if (y < windowClip.y) code |= 4;
+
+  // derecha
+  if (x > windowClip.x + windowClip.w) code |= 2;
+
+  // izquierda
+  if (x < windowClip.x) code |= 1;
 
   return code;
 }
-// ALGORITMO COHEN-SUTHERLAND se revisa cada caso y se realiza el recorte 
+
+// ALGORITMO COHEN-SUTHERLAND
+// se revisa cada caso y se realiza el recorte
 function cohenSutherland(x1, y1, x2, y2){
 
   let code1 = computeCode(x1, y1);
   let code2 = computeCode(x2, y2);
 
-  let accept = false;
-
   while (true) {
 
-    // CASO 1: totalmente dentro del viewpart 
-    if ((code1 | code2) === 0) {
-      accept = true;
-      break;
-    }
+    // CASO 1: totalmente dentro del viewport
+    if ((code1 | code2) === 0) break;
 
     // CASO 2: totalmente fuera
-    if ((code1 & code2) !== 0) {
-      return null;
-    }
+    if ((code1 & code2) !== 0) return null;
 
-    // CASO 3: recorte, se calcula el punto de intersecci y se procede a recortar 
+    // CASO 3: recorte
+    // se calcula el punto de intersección y se procede a recortar
     let codeOut = code1 !== 0 ? code1 : code2;
-
     let x, y;
 
-    // intersecciones
-    if (codeOut & 8) { // arriba 1000
-      x = x1 + (x2 - x1) * (ymax - y1) / (y2 - y1);
-      y = ymax;
+    // arriba
+    if (codeOut & 8) {
+      x = x1 + (x2 - x1) * ((windowClip.y + windowClip.h) - y1) / (y2 - y1);
+      y = windowClip.y + windowClip.h;
     }
-    else if (codeOut & 4) { // abajo 0100
-      x = x1 + (x2 - x1) * (ymin - y1) / (y2 - y1);
-      y = ymin;
+    // abajo
+    else if (codeOut & 4) {
+      x = x1 + (x2 - x1) * (windowClip.y - y1) / (y2 - y1);
+      y = windowClip.y;
     }
-    else if (codeOut & 2) { // derecha 0010
-      y = y1 + (y2 - y1) * (xmax - x1) / (x2 - x1);
-      x = xmax;
+    // derecha
+    else if (codeOut & 2) {
+      y = y1 + (y2 - y1) * ((windowClip.x + windowClip.w) - x1) / (x2 - x1);
+      x = windowClip.x + windowClip.w;
     }
-    else if (codeOut & 1) { // izquierda 0001
-      y = y1 + (y2 - y1) * (xmin - x1) / (x2 - x1);
-      x = xmin;
+    // izquierda
+    else if (codeOut & 1) {
+      y = y1 + (y2 - y1) * (windowClip.x - x1) / (x2 - x1);
+      x = windowClip.x;
     }
 
-    //  se reemplaza el punto
+    // se reemplaza el punto que estaba fuera por el nuevo punto recortado
     if (codeOut === code1) {
       x1 = x;
       y1 = y;
@@ -115,30 +118,69 @@ function cohenSutherland(x1, y1, x2, y2){
   return { x1, y1, x2, y2 };
 }
 
+// 🖱️ la ventana se mueve libre con el mouse y no es fija
+let dragging = false;
+let offsetX, offsetY;
+
+canvas.addEventListener("mousedown", (e) => {
+  let rect = canvas.getBoundingClientRect();
+  let mx = e.clientX - rect.left;
+  let my = e.clientY - rect.top;
+
+  if (
+    mx > windowClip.x &&
+    mx < windowClip.x + windowClip.w &&
+    my > windowClip.y &&
+    my < windowClip.y + windowClip.h
+  ) {
+    dragging = true;
+    offsetX = mx - windowClip.x;
+    offsetY = my - windowClip.y;
+  }
+});
+
+// cambia la ventana y se vuelve a dibujar y recortar en tiempo real
+canvas.addEventListener("mousemove", (e) => {
+  if (!dragging) return;
+
+  let rect = canvas.getBoundingClientRect();
+  let mx = e.clientX - rect.left;
+  let my = e.clientY - rect.top;
+
+  windowClip.x = mx - offsetX;
+  windowClip.y = my - offsetY;
+
+  dibujar();
+});
+
+canvas.addEventListener("mouseup", () => dragging = false);
+canvas.addEventListener("mouseleave", () => dragging = false);
+
 // FUNCIÓN PRINCIPAL
+// se dibuja la ventana, la línea original y la línea recortada
 function dibujar(){
 
-ctx.clearRect(0, 0, 500, 400);
-  dibujarVentana();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // se dibuja la ventana
+  ctx.strokeStyle = "black";
+  ctx.strokeRect(windowClip.x, windowClip.y, windowClip.w, windowClip.h);
 
   let x1 = parseInt(document.getElementById("x1").value);
   let y1 = parseInt(document.getElementById("y1").value);
   let x2 = parseInt(document.getElementById("x2").value);
   let y2 = parseInt(document.getElementById("y2").value);
 
-  if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
-    alert("Ingresa todos los valores");
-    return;
-  }
+  if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) return;
 
-  // línea original
+  // línea original (azul)
   ctx.strokeStyle = "blue";
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
   ctx.stroke();
 
-    // se diseña y se especfica como es la línea recortada
+  // línea recortada (roja)
   let clipped = cohenSutherland(x1, y1, x2, y2);
 
   if (clipped) {
@@ -153,10 +195,8 @@ ctx.clearRect(0, 0, 500, 400);
 }
 
 // inicial
-dibujarVentana();
-
+dibujar();
 </script>
 
 </body>
 </html>
-
