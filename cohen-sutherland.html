@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Cohen-Sutherland Dinámico</title>
+<title>Cohen-Sutherland</title>
 
 <style>
 body {
@@ -18,14 +18,77 @@ canvas {
 
 <body>
 
-<h2>Cohen-Sutherland con viewport dinámico</h2>
+<h2>Recorte de líneas - Cohen Sutherland</h2>
 
-<canvas id="canvas" width="600" height="400"></canvas>
+<canvas id="canvas" width="500" height="400"></canvas>
+<br><br>
+
+//se crean los botones para ingresar los puntos y empezara dibujar las lineas 
+X1 <input id="x1" type="number">
+Y1 <input id="y1" type="number">
+X2 <input id="x2" type="number">
+Y2 <input id="y2" type="number">
+
+<button onclick="dibujar()">Dibujar</button>
 
 <script>
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+
+// ventana de recorte
+const xmin = 100, xmax = 400;
+const ymin = 80, ymax = 300;
+
+// se crea la funcion para todo lo que se ve en el programa como la ventana o la linea 
+function dibujarVentana(){
+  ctx.strokeStyle = "black";
+  ctx.strokeRect(xmin, ymin, xmax - xmin, ymax - ymin);
+}
+
+//se inicia el primer paso para el algoritmo de cohen , se empieza a calcular los codigos de cada region 
+function computeCode(x, y){
+  let code = 0;
+
+  if (y > ymax) code |= 8;
+  if (y < ymin) code |= 4;
+  if (x > xmax) code |= 2;
+  if (x < xmin) code |= 1;
+
+  return code;
+}
+
+// FUNCIÓN PRINCIPAL
+function dibujar(){
+
+  ctx.clearRect(0, 0, 500, 400);
+  dibujarVentana();
+
+  let x1 = parseInt(document.getElementById("x1").value);
+  let y1 = parseInt(document.getElementById("y1").value);
+  let x2 = parseInt(document.getElementById("x2").value);
+  let y2 = parseInt(document.getElementById("y2").value);
+
+  if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
+    alert("Ingresa todos los valores");
+    return;
+  }
+
+  // línea original
+  ctx.strokeStyle = "blue";
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+
+  // solo mostramos códigos por el momento 
+  console.log("Code P1:", computeCode(x1,y1));
+  console.log("Code P2:", computeCode(x2,y2));
+}
+
+// inicial
+dibujarVentana();
 </script>
 
 </body>
 </html>
+
